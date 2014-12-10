@@ -8,6 +8,71 @@ module Dynamiq
       @port = port
     end
 
+    # Create a Dynamiq topic
+    def create_topic(topic, opts={})
+      begin
+        connection.put("/topics/#{topic}")
+        true
+      rescue => e
+        Dynamiq.logger.error "an error occured when creating a topic #{e.inspect}"
+        false
+      end
+    end
+
+    # Create a Dynamiq queue
+    def create_queue(queue, opts={})
+      begin
+        connection.put("/queues/#{queue}")
+        true
+      rescue => e
+        Dynamiq.logger.error "an error occured when creating a queue #{e.inspect}"
+        false
+      end
+    end
+
+    # Delete a Dynamiq topic
+    def delete_topic(topic)
+      begin
+        connection.delete("/topics/#{topic}")
+        true
+      rescue => e
+        Dynamiq.logger.error "an error occured when deleting a topic #{e.inspect}"
+        false
+      end
+    end
+
+    # Delete a Dynamiq queueu
+    def delete_queue(queue)
+      begin
+        connection.delete("/queues/#{queue}")
+        true
+      rescue => e
+        Dynamiq.logger.error "an error occured when deleting a queue #{e.inspect}"
+        false
+      end
+    end
+
+    # Assign a queue to a topic
+    def assign_queue(topic, queue)
+      begin
+        connection.put("/topics/#{topic}/queues/#{queue}")
+        true
+      rescue => e
+        Dynamiq.logger.error "an error occured when assigning a queue to a topic #{e.inspect}"
+        false
+      end
+    end
+
+    # Configure a queue
+    def configure_queue(queue, opts={})
+      begin
+        connection.patch("/queues/#{queue}", opts)
+      rescue => e
+        Dynamiq.logger.error "an error occured when updating the configuration for a queue #{e.inspect}"
+        false
+      end
+    end
+
     # Publish to a Dynamiq topic
     # @param topic [String] name of the topic
     # @param data [Hash] message data

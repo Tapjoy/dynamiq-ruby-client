@@ -1,18 +1,159 @@
 require 'spec_helper'
 
 describe Dynamiq::Client do
+  let (:topic_name) {"test_topic"}
+  let (:queue_name) {"test_queue"}
   let (:url) {'http://example.io'}
   let (:port) {'9999'}
   let (:conn) {Faraday.new(:url=>"#{url}:#{port}") }
   let (:response) {Faraday::Response.new({:status=>200, :body => '{}'})}
   subject (:client) {Dynamiq::Client.new(url,port)}
 
-  context 'publish' do
-    before (:each) do
-      subject.stub(:connection).and_return(conn)
-      conn.stub(:put)
+  before :each do
+    subject.stub(:connection).and_return(conn)
+    Dynamiq.logger.stub(:error)
+  end
+
+  context 'create_topic' do
+    it 'should PUT the topic name' do
+      conn.should_receive(:put).with("/topics/#{topic_name}")
+      subject.create_topic(topic_name)
     end
 
+    context 'on failure' do
+      before :each do
+        conn.stub(:put).and_raise
+      end
+
+      it 'should log the error' do
+        Dynamiq.logger.should_receive(:error)
+        subject.create_topic(topic_name)
+      end
+
+      it 'should return false' do
+        expect(subject.create_topic(topic_name)).to eq(false)
+      end
+    end
+  end
+
+  context 'create_queue' do
+    it 'should PUT the queue name' do
+      conn.should_receive(:put).with("/queues/#{queue_name}")
+      subject.create_queue(queue_name)
+    end
+
+    context 'on failure' do
+      before :each do
+        conn.stub(:put).and_raise
+      end
+
+      it 'should log the error' do
+        Dynamiq.logger.should_receive(:error)
+        subject.create_queue(queue_name)
+      end
+
+      it 'should return false' do
+        expect(subject.create_queue(queue_name)).to eq(false)
+      end
+    end
+  end
+
+  context 'delete_topic' do
+    it 'should DELETE the topic name' do
+      conn.should_receive(:delete).with("/topics/#{topic_name}")
+      subject.delete_topic(topic_name)
+    end
+
+    context 'on failure' do
+      before :each do
+        conn.stub(:delete).and_raise
+      end
+
+      it 'should log the error' do
+        Dynamiq.logger.should_receive(:error)
+        subject.create_queue(queue_name)
+      end
+
+      it 'should return false' do
+        expect(subject.create_queue(queue_name)).to eq(false)
+      end
+    end
+  end
+
+  context 'delete_queue' do
+    it 'should DELETE the queue name' do
+      conn.should_receive(:delete).with("/queues/#{queue_name}")
+      subject.delete_queue(queue_name)
+    end
+
+    context 'on failure' do
+      before :each do
+        conn.stub(:delete).and_raise
+      end
+
+      it 'should log the error' do
+        Dynamiq.logger.should_receive(:error)
+        subject.create_queue(queue_name)
+      end
+
+      it 'should return false' do
+        expect(subject.create_queue(queue_name)).to eq(false)
+      end
+    end
+  end
+
+  context 'assign_queue' do
+    it 'should PUT the topic and queue names' do
+      conn.should_receive(:put).with("/topics/#{topic_name}/queues/#{queue_name}")
+      subject.assign_queue(topic_name, queue_name)
+    end
+
+    context 'on failure' do
+      before :each do
+        conn.stub(:put).and_raise
+      end
+
+      it 'should log the error' do
+        Dynamiq.logger.should_receive(:error)
+        subject.assign_queue(topic_name, queue_name)
+      end
+
+      it 'should return false' do
+        expect(subject.assign_queue(topic_name, queue_name)).to eq(false)
+      end
+    end
+  end
+
+  context 'configure_queue' do
+    let (:config_data) {
+      {
+        :visibility_timeout=>10,
+        :min_partitions=>1,
+        :max_partitions=>10
+      }
+    }
+    it 'should PATCH the queue name with option data' do
+      conn.should_receive(:patch).with("/queues/#{queue_name}", config_data)
+      subject.configure_queue(queue_name, config_data)
+    end
+
+    context 'on failure' do
+      before :each do
+        conn.stub(:patch).and_raise
+      end
+
+      it 'should log the error' do
+        Dynamiq.logger.should_receive(:error)
+        subject.configure_queue(queue_name, config_data)
+      end
+
+      it 'should return false' do
+        expect(subject.configure_queue(queue_name, config_data)).to eq(false)
+      end
+    end
+  end
+
+  context 'publish' do
     it 'should PUT message to topic' do
       conn.should_receive(:put).with("/topics/topic/message", {:x=>'y'})
       subject.publish('topic', {:x=>'y'})
@@ -26,11 +167,6 @@ describe Dynamiq::Client do
   end
 
   context 'acknowledge' do
-    before (:each) do
-      Dynamiq::Client.any_instance.stub(:connection).and_return(conn)
-      conn.stub(:delete)
-    end
-
     it 'should DELETE message from queue' do
       conn.should_receive(:delete).with("/queues/q/message/id")
       subject.acknowledge('q', 'id')
@@ -45,7 +181,6 @@ describe Dynamiq::Client do
 
   context 'receive' do
     before (:each) do
-      Dynamiq::Client.any_instance.stub(:connection).and_return(conn)
       conn.stub(:get).and_return(response)
     end
 
@@ -70,7 +205,6 @@ describe Dynamiq::Client do
 
   context 'queue_details' do
     before (:each) do
-      Dynamiq::Client.any_instance.stub(:connection).and_return(conn)
       conn.stub(:get).and_return(response)
     end
 

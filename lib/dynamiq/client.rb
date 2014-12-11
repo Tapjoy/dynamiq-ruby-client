@@ -8,6 +8,119 @@ module Dynamiq
       @port = port
     end
 
+    # Create a Dynamiq topic
+    # @param topic [String] name of the topic
+    # @param opts [Hash] optional parameters
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.create_topic('my_topic')
+    # => 
+    # true
+    #
+    def create_topic(topic, opts={})
+      begin
+        connection.put("/topics/#{topic}")
+        true
+      rescue => e
+        Dynamiq.logger.error "an error occured when creating a topic #{e.inspect}"
+        false
+      end
+    end
+
+    # Create a Dynamiq queue
+    # @param queue [String] name of the queue
+    # @param opts [Hash] optional parameters
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.create_queue('my_queue')
+    # => 
+    # true
+    #
+    def create_queue(queue, opts={})
+      begin
+        connection.put("/queues/#{queue}")
+        true
+      rescue => e
+        Dynamiq.logger.error "an error occured when creating a queue #{e.inspect}"
+        false
+      end
+    end
+
+    # Delete a Dynamiq topic
+    # @param topic [String] name of the topic
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.delete_topic('my_topic')
+    # => 
+    # true
+    #
+    def delete_topic(topic)
+      begin
+        connection.delete("/topics/#{topic}")
+        true
+      rescue => e
+        Dynamiq.logger.error "an error occured when deleting a topic #{e.inspect}"
+        false
+      end
+    end
+
+    # Delete a Dynamiq queue
+    # @param queue [String] name of the queue
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.delete_queue('my_queue')
+    # => 
+    # true
+    #
+    def delete_queue(queue)
+      begin
+        connection.delete("/queues/#{queue}")
+        true
+      rescue => e
+        Dynamiq.logger.error "an error occured when deleting a queue #{e.inspect}"
+        false
+      end
+    end
+
+    # Assign a queue to a topic
+    # @param topic [String] name of the topic
+    # @param queue [String] name of the queue
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.assign_queue('my_topic','my_queue')
+    # => 
+    # true
+    #
+    def assign_queue(topic, queue)
+      begin
+        connection.put("/topics/#{topic}/queues/#{queue}")
+        true
+      rescue => e
+        Dynamiq.logger.error "an error occured when assigning a queue to a topic #{e.inspect}"
+        false
+      end
+    end
+
+    # Configure a queue
+    # @param queue [String] name of the queue
+    # @param opts [Integer] :visibility_timeout The number of seconds to wait before making a message available again
+    # @param opts [Integer] :min_partitions The minimum number of partitions for a Queue to serve messages from
+    # @param opts [Integer] :max_partitions The maximum number of partitions for a Queue to serve messages from
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.assign_queue('my_topic','my_queue')
+    # => 
+    # true
+    #
+    def configure_queue(queue, opts={})
+      begin
+        connection.patch("/queues/#{queue}", opts)
+      rescue => e
+        Dynamiq.logger.error "an error occured when updating the configuration for a queue #{e.inspect}"
+        false
+      end
+    end
+
     # Publish to a Dynamiq topic
     # @param topic [String] name of the topic
     # @param data [Hash] message data

@@ -102,10 +102,10 @@ describe Dynamiq::Client do
     end
   end
 
-  context 'assign_queue' do
+  context 'subscribe_queue' do
     it 'should PUT the topic and queue names' do
       conn.should_receive(:put).with("/topics/#{topic_name}/queues/#{queue_name}")
-      subject.assign_queue(topic_name, queue_name)
+      subject.subscribe_queue(topic_name, queue_name)
     end
 
     context 'on failure' do
@@ -115,11 +115,11 @@ describe Dynamiq::Client do
 
       it 'should log the error' do
         Dynamiq.logger.should_receive(:error)
-        subject.assign_queue(topic_name, queue_name)
+        subject.subscribe_queue(topic_name, queue_name)
       end
 
       it 'should return false' do
-        expect(subject.assign_queue(topic_name, queue_name)).to eq(false)
+        expect(subject.subscribe_queue(topic_name, queue_name)).to eq(false)
       end
     end
   end
@@ -155,14 +155,45 @@ describe Dynamiq::Client do
 
   context 'publish' do
     it 'should PUT message to topic' do
-      conn.should_receive(:put).with("/topics/topic/message", {:x=>'y'})
-      subject.publish('topic', {:x=>'y'})
+      conn.should_receive(:put).with("/topics/#{topic_name}/message", {:x=>'y'})
+      subject.publish(topic_name, {:x=>'y'})
     end
 
-    it 'should log with failure' do
-      conn.stub(:put).and_raise
-      Dynamiq.logger.should_receive(:error)
-      expect(subject.publish('topic', {:x=>'y'})).to eq(false)
+    context 'on failure' do
+      before :each do
+        conn.stub(:put).and_raise
+      end
+
+      it 'should log the error' do
+        Dynamiq.logger.should_receive(:error)
+        subject.publish(topic_name, {:x=>'y'})
+      end
+
+      it 'should return false' do
+        expect(subject.publish(topic_name, {:x=>'y'})).to eq(false)
+      end
+    end
+  end
+
+  context 'enqueue' do
+    it 'should PUT message to the queue' do
+      conn.should_receive(:put).with("/queues/#{queue_name}/message", {:x=>'y'})
+      subject.enqueue(queue_name, {:x=>'y'})
+    end
+
+    context 'on failure' do
+      before :each do
+        conn.stub(:put).and_raise
+      end
+
+      it 'should log the error' do
+        Dynamiq.logger.should_receive(:error)
+        subject.enqueue(queue_name, {:x=>'y'})
+      end
+
+      it 'should return false' do
+        expect(subject.enqueue(queue_name, {:x=>'y'})).to eq(false)
+      end
     end
   end
 

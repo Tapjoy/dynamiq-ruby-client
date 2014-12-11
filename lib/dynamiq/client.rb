@@ -82,7 +82,7 @@ module Dynamiq
       end
     end
 
-    # Assign a queue to a topic
+    # Subscribe a queue to a topic
     # @param topic [String] name of the topic
     # @param queue [String] name of the queue
     # @example
@@ -91,7 +91,7 @@ module Dynamiq
     # => 
     # true
     #
-    def assign_queue(topic, queue)
+    def subscribe_queue(topic, queue)
       begin
         connection.put("/topics/#{topic}/queues/#{queue}")
         true
@@ -121,7 +121,7 @@ module Dynamiq
       end
     end
 
-    # Publish to a Dynamiq topic
+    # Publish to a Dynamiq topic, which will enqueue to all subscribed queues
     # @param topic [String] name of the topic
     # @param data [Hash] message data
     # @example
@@ -133,6 +133,25 @@ module Dynamiq
     def publish(topic, data)
       begin
         connection.put("/topics/#{topic}/message", data)
+        true
+      rescue => e
+        Dynamiq.logger.error "an error occured when publishing #{e.inspect}"
+        false
+      end
+    end
+
+    # Enqueue to a Dynamiq queue directly
+    # @param queue [String] name of the queue
+    # @param data [Hash] message data
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.publish('my_topic', {:k=>'v'})
+    # => 
+    # true
+    #
+    def enqueue(queue, data)
+      begin
+        connection.put("/queues/#{queue}/message", data)
         true
       rescue => e
         Dynamiq.logger.error "an error occured when publishing #{e.inspect}"

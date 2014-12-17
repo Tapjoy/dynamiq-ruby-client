@@ -22,7 +22,7 @@ module Dynamiq
         connection.put("/topics/#{topic}")
         true
       rescue => e
-        Dynamiq.logger.error "an error occured when creating a topic #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when creating a topic #{e.inspect}"
         false
       end
     end
@@ -41,7 +41,7 @@ module Dynamiq
         connection.put("/queues/#{queue}")
         true
       rescue => e
-        Dynamiq.logger.error "an error occured when creating a queue #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when creating a queue #{e.inspect}"
         false
       end
     end
@@ -59,7 +59,7 @@ module Dynamiq
         connection.delete("/topics/#{topic}")
         true
       rescue => e
-        Dynamiq.logger.error "an error occured when deleting a topic #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when deleting a topic #{e.inspect}"
         false
       end
     end
@@ -77,7 +77,7 @@ module Dynamiq
         connection.delete("/queues/#{queue}")
         true
       rescue => e
-        Dynamiq.logger.error "an error occured when deleting a queue #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when deleting a queue #{e.inspect}"
         false
       end
     end
@@ -96,7 +96,7 @@ module Dynamiq
         connection.put("/topics/#{topic}/queues/#{queue}")
         true
       rescue => e
-        Dynamiq.logger.error "an error occured when assigning a queue to a topic #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when assigning a queue to a topic #{e.inspect}"
         false
       end
     end
@@ -116,7 +116,7 @@ module Dynamiq
       begin
         connection.patch("/queues/#{queue}", opts)
       rescue => e
-        Dynamiq.logger.error "an error occured when updating the configuration for a queue #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when updating the configuration for a queue #{e.inspect}"
         false
       end
     end
@@ -135,7 +135,7 @@ module Dynamiq
         connection.put("/topics/#{topic}/message", data)
         true
       rescue => e
-        Dynamiq.logger.error "an error occured when publishing #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when publishing #{e.inspect}"
         false
       end
     end
@@ -154,7 +154,7 @@ module Dynamiq
         connection.put("/queues/#{queue}/message", data)
         true
       rescue => e
-        Dynamiq.logger.error "an error occured when publishing #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when publishing #{e.inspect}"
         false
       end
     end
@@ -173,7 +173,7 @@ module Dynamiq
         connection.delete("/queues/#{queue}/message/#{message_id}")
         true
       rescue => e
-        Dynamiq.logger.error "an error occured when acknowledging #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when acknowledging #{e.inspect}"
         false
       end
     end
@@ -193,7 +193,7 @@ module Dynamiq
         return JSON.parse(resp.body) if resp.status == 200
         []
       rescue => e
-        Dynamiq.logger.error "an error occured when acknowledging #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when acknowledging #{e.inspect}"
       end
     end
 
@@ -211,7 +211,7 @@ module Dynamiq
         return JSON.parse(resp.body) if resp.status == 200
         nil
       rescue => e
-        Dynamiq.logger.error "an error occured when acquiring details for queue #{queue} #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when acquiring details for queue #{queue} #{e.inspect}"
       end
     end
 

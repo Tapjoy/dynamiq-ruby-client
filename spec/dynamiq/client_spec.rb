@@ -11,7 +11,7 @@ describe Dynamiq::Client do
 
   before :each do
     subject.stub(:connection).and_return(conn)
-    Dynamiq.logger.stub(:error)
+    ::Dynamiq.logger.stub(:error)
   end
 
   context 'create_topic' do
@@ -26,7 +26,7 @@ describe Dynamiq::Client do
       end
 
       it 'should log the error' do
-        Dynamiq.logger.should_receive(:error)
+        ::Dynamiq.logger.should_receive(:error)
         subject.create_topic(topic_name)
       end
 
@@ -48,7 +48,7 @@ describe Dynamiq::Client do
       end
 
       it 'should log the error' do
-        Dynamiq.logger.should_receive(:error)
+        ::Dynamiq.logger.should_receive(:error)
         subject.create_queue(queue_name)
       end
 
@@ -70,7 +70,7 @@ describe Dynamiq::Client do
       end
 
       it 'should log the error' do
-        Dynamiq.logger.should_receive(:error)
+        ::Dynamiq.logger.should_receive(:error)
         subject.create_queue(queue_name)
       end
 
@@ -92,7 +92,7 @@ describe Dynamiq::Client do
       end
 
       it 'should log the error' do
-        Dynamiq.logger.should_receive(:error)
+        ::Dynamiq.logger.should_receive(:error)
         subject.create_queue(queue_name)
       end
 
@@ -114,7 +114,7 @@ describe Dynamiq::Client do
       end
 
       it 'should log the error' do
-        Dynamiq.logger.should_receive(:error)
+        ::Dynamiq.logger.should_receive(:error)
         subject.subscribe_queue(topic_name, queue_name)
       end
 
@@ -143,7 +143,7 @@ describe Dynamiq::Client do
       end
 
       it 'should log the error' do
-        Dynamiq.logger.should_receive(:error)
+        ::Dynamiq.logger.should_receive(:error)
         subject.configure_queue(queue_name, config_data)
       end
 
@@ -165,7 +165,7 @@ describe Dynamiq::Client do
       end
 
       it 'should log the error' do
-        Dynamiq.logger.should_receive(:error)
+        ::Dynamiq.logger.should_receive(:error)
         subject.publish(topic_name, {:x=>'y'})
       end
 
@@ -187,7 +187,7 @@ describe Dynamiq::Client do
       end
 
       it 'should log the error' do
-        Dynamiq.logger.should_receive(:error)
+        ::Dynamiq.logger.should_receive(:error)
         subject.enqueue(queue_name, {:x=>'y'})
       end
 
@@ -205,7 +205,7 @@ describe Dynamiq::Client do
 
     it 'should log with failure' do
       conn.stub(:delete).and_raise
-      Dynamiq.logger.should_receive(:error)
+      ::Dynamiq.logger.should_receive(:error)
       expect(subject.acknowledge('q', 'id')).to eq(false)
     end
   end
@@ -229,7 +229,7 @@ describe Dynamiq::Client do
 
     it 'should log with failure' do
       conn.stub(:get).and_raise
-      Dynamiq.logger.should_receive(:error)
+      ::Dynamiq.logger.should_receive(:error)
       subject.receive('q', 11)
     end
   end
@@ -253,7 +253,7 @@ describe Dynamiq::Client do
 
     it 'should log with failure' do
       conn.stub(:get).and_raise
-      Dynamiq.logger.should_receive(:error)
+      ::Dynamiq.logger.should_receive(:error)
       subject.queue_details('q')
     end
   end

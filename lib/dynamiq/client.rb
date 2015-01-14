@@ -217,6 +217,13 @@ module Dynamiq
       end
     end
 
+    # List known Dynamiq queues
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.known_queues
+    # => 
+    # [...queues]
+    #
     def known_queues
       begin
         resp = connection.get("/queues")
@@ -228,6 +235,13 @@ module Dynamiq
       end
     end
 
+    # List known Dynamiq topics
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.known_topics
+    # => 
+    # [...topics]
+    #
     def known_topics
       begin
         resp = connection.get("/topics")

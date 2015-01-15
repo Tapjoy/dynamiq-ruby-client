@@ -132,8 +132,9 @@ describe Dynamiq::Client do
         :max_partitions=>10
       }
     }
+
     it 'should PATCH the queue name with option data' do
-      conn.should_receive(:patch).with("/queues/#{queue_name}", config_data)
+      conn.should_receive(:patch)
       subject.configure_queue(queue_name, config_data)
     end
 

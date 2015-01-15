@@ -114,7 +114,11 @@ module Dynamiq
     #
     def configure_queue(queue, opts={})
       begin
-        connection.patch("/queues/#{queue}", opts)
+        connection.patch do |req|
+          req.url "/queues/#{queue}"
+          req.headers["Content-Type"] = "application/json"
+          req.body = JSON.dump(opts)
+        end
       rescue => e
         ::Dynamiq.logger.error "an error occured when updating the configuration for a queue #{e.inspect}"
         false

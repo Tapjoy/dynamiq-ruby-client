@@ -248,7 +248,7 @@ module Dynamiq
         return JSON.parse(resp.body)["topics"] if resp.status == 200
         []
       rescue => e
-        ::Dynamiq.logger.error "an error occured when listing the known queues"
+        ::Dynamiq.logger.error "an error occured when listing the known topics"
         []
       end
     end

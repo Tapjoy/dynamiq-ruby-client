@@ -257,4 +257,54 @@ describe Dynamiq::Client do
       subject.queue_details('q')
     end
   end
+
+  context 'known_queues' do
+    let (:response) {Faraday::Response.new({:status=>200, :body => '[]'})}
+    before (:each) do
+      conn.stub(:get).and_return(response)
+    end
+
+    it 'should GET the known list of queues' do
+      conn.should_receive(:get).with("/queues")
+      expect(subject.known_queues).to eq([])
+    end
+
+    it 'should return an empty array for non 200s' do
+      r = Faraday::Response.new({:status=>404, :body => '{}'})
+      conn.stub(:get).and_return(r)
+
+      expect(subject.known_queues).to eq([])
+    end
+
+    it 'should log with failure' do
+      conn.stub(:get).and_raise
+      ::Dynamiq.logger.should_receive(:error)
+      subject.known_queues
+    end
+  end
+
+  context 'known_topics' do
+    let (:response) {Faraday::Response.new({:status=>200, :body => '[]'})}
+    before (:each) do
+      conn.stub(:get).and_return(response)
+    end
+
+    it 'should GET the known list of topics' do
+      conn.should_receive(:get).with("/topics")
+      expect(subject.known_topics).to eq([])
+    end
+
+    it 'should return an empty array for non 200s' do
+      r = Faraday::Response.new({:status=>404, :body => '{}'})
+      conn.stub(:get).and_return(r)
+
+      expect(subject.known_topics).to eq([])
+    end
+
+    it 'should log with failure' do
+      conn.stub(:get).and_raise
+      ::Dynamiq.logger.should_receive(:error)
+      subject.known_topics
+    end
+  end
 end

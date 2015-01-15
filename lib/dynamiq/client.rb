@@ -193,7 +193,8 @@ module Dynamiq
         return JSON.parse(resp.body) if resp.status == 200
         []
       rescue => e
-        ::Dynamiq.logger.error "an error occured when acknowledging #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when receiving messages #{e.inspect}"
+        []
       end
     end
 
@@ -212,6 +213,43 @@ module Dynamiq
         nil
       rescue => e
         ::Dynamiq.logger.error "an error occured when acquiring details for queue #{queue} #{e.inspect}"
+        nil
+      end
+    end
+
+    # List known Dynamiq queues
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.known_queues
+    # => 
+    # [...queues]
+    #
+    def known_queues
+      begin
+        resp = connection.get("/queues")
+        return JSON.parse(resp.body)["queues"] if resp.status == 200
+        []
+      rescue => e
+        ::Dynamiq.logger.error "an error occured when listing the known queues"
+        []
+      end
+    end
+
+    # List known Dynamiq topics
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.known_topics
+    # => 
+    # [...topics]
+    #
+    def known_topics
+      begin
+        resp = connection.get("/topics")
+        return JSON.parse(resp.body)["topics"] if resp.status == 200
+        []
+      rescue => e
+        ::Dynamiq.logger.error "an error occured when listing the known topics"
+        []
       end
     end
 

@@ -3,9 +3,11 @@ require 'json'
 
 module Dynamiq
   class Client
-    def initialize(url, port)
+    attr_reader :connection_timeout
+    def initialize(url, port, opts={})
       @url = url
       @port = port
+      @connection_timeout = opts[:connection_timeout] || 2
     end
 
     # Create a Dynamiq topic
@@ -258,7 +260,10 @@ module Dynamiq
     end
 
     def connection
-      @connection || Faraday.new(:url=>"#{@url}:#{@port}")
+      @connection ||= Faraday.new(:url=>"#{@url}:#{@port}") do |c|
+        c.options.timeout = self.connection_timeout
+        c.adapter  Faraday.default_adapter
+      end
     end
   end
 end

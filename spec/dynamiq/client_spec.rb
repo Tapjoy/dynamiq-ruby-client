@@ -22,6 +22,13 @@ describe Dynamiq::Client do
         expect(conn.options.timeout).to eq(connection_timeout) 
       end
     end
+
+    context "when no connection timeout is provided" do
+      let(:client_options) {{}}
+      it "uses the internally set default value" do
+        expect(conn.options.timeout).to eq(subject.class::DEFAULT_CONNECTION_TIMEOUT) 
+      end
+    end
   end
 
   context '#create_topic' do

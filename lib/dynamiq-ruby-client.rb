@@ -1,1 +1,1 @@
-require 'rqs'
+require 'dynamiq'

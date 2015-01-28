@@ -15,7 +15,7 @@ module Dynamiq
       @connection_timeout = opts[:connection_timeout] || DEFAULT_CONNECTION_TIMEOUT
     end
 
-    # Create a Dynamiq topic
+    # Create a Dynamiq topic, if it does not already exist on the server
     # @param topic [String] name of the topic
     # @param opts [Hash] optional parameters
     # @example
@@ -34,7 +34,7 @@ module Dynamiq
       end
     end
 
-    # Create a Dynamiq queue
+    # Create a Dynamiq queue, if it does not already exist on the server
     # @param queue [String] name of the queue
     # @param opts [Hash] optional parameters
     # @example
@@ -53,7 +53,7 @@ module Dynamiq
       end
     end
 
-    # Delete a Dynamiq topic
+    # Delete a Dynamiq topic, if it exists on the server
     # @param topic [String] name of the topic
     # @example
     #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
@@ -71,7 +71,7 @@ module Dynamiq
       end
     end
 
-    # Delete a Dynamiq queue
+    # Delete a Dynamiq queue, if it exists on the server
     # @param queue [String] name of the queue
     # @example
     #   @rqs = Dynamiq::Client.new('http://example.io', '9999')

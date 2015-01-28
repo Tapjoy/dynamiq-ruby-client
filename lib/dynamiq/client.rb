@@ -5,6 +5,9 @@ module Dynamiq
   class Client
     DEFAULT_CONNECTION_TIMEOUT = 2
 
+    class ConnectionError < Faraday::Error::ConnectionFailed; end
+    class TimeoutError < Faraday::Error::TimeoutError; end
+
     attr_reader :connection_timeout
     def initialize(url, port, opts={})
       @url = url
@@ -23,7 +26,7 @@ module Dynamiq
     #
     def create_topic(topic, opts={})
       begin
-        connection.put("/topics/#{topic}")
+        with_dynamiq_errors { connection.put("/topics/#{topic}") }
         true
       rescue => e
         ::Dynamiq.logger.error "an error occured when creating a topic #{e.inspect}"
@@ -42,7 +45,7 @@ module Dynamiq
     #
     def create_queue(queue, opts={})
       begin
-        connection.put("/queues/#{queue}")
+        with_dynamiq_errors { connection.put("/queues/#{queue}") }
         true
       rescue => e
         ::Dynamiq.logger.error "an error occured when creating a queue #{e.inspect}"
@@ -60,7 +63,7 @@ module Dynamiq
     #
     def delete_topic(topic)
       begin
-        connection.delete("/topics/#{topic}")
+        with_dynamiq_errors { connection.delete("/topics/#{topic}") }
         true
       rescue => e
         ::Dynamiq.logger.error "an error occured when deleting a topic #{e.inspect}"
@@ -78,7 +81,7 @@ module Dynamiq
     #
     def delete_queue(queue)
       begin
-        connection.delete("/queues/#{queue}")
+        with_dynamiq_errors { connection.delete("/queues/#{queue}") }
         true
       rescue => e
         ::Dynamiq.logger.error "an error occured when deleting a queue #{e.inspect}"
@@ -97,7 +100,7 @@ module Dynamiq
     #
     def subscribe_queue(topic, queue)
       begin
-        connection.put("/topics/#{topic}/queues/#{queue}")
+        with_dynamiq_errors { connection.put("/topics/#{topic}/queues/#{queue}") }
         true
       rescue => e
         ::Dynamiq.logger.error "an error occured when assigning a queue to a topic #{e.inspect}"
@@ -118,10 +121,12 @@ module Dynamiq
     #
     def configure_queue(queue, opts={})
       begin
-        connection.patch do |req|
-          req.url "/queues/#{queue}"
-          req.headers["Content-Type"] = "application/json"
-          req.body = JSON.dump(opts)
+        with_dynamiq_errors do
+          connection.patch do |req|
+            req.url "/queues/#{queue}"
+            req.headers["Content-Type"] = "application/json"
+            req.body = JSON.dump(opts)
+          end
         end
       rescue => e
         ::Dynamiq.logger.error "an error occured when updating the configuration for a queue #{e.inspect}"
@@ -140,7 +145,7 @@ module Dynamiq
     #
     def publish(topic, data)
       begin
-        connection.put("/topics/#{topic}/message", data)
+        with_dynamiq_errors { connection.put("/topics/#{topic}/message", data) }
         true
       rescue => e
         ::Dynamiq.logger.error "an error occured when publishing #{e.inspect}"
@@ -159,7 +164,7 @@ module Dynamiq
     #
     def enqueue(queue, data)
       begin
-        connection.put("/queues/#{queue}/message", data)
+        with_dynamiq_errors { connection.put("/queues/#{queue}/message", data) }
         true
       rescue => e
         ::Dynamiq.logger.error "an error occured when publishing #{e.inspect}"
@@ -178,7 +183,7 @@ module Dynamiq
     #
     def acknowledge(queue, message_id)
       begin
-        connection.delete("/queues/#{queue}/message/#{message_id}")
+        with_dynamiq_errors { connection.delete("/queues/#{queue}/message/#{message_id}") }
         true
       rescue => e
         ::Dynamiq.logger.error "an error occured when acknowledging #{e.inspect}"
@@ -197,7 +202,7 @@ module Dynamiq
     #
     def receive(queue, batch_size=10)
       begin
-        resp = connection.get("/queues/#{queue}/messages/#{batch_size}")
+        resp = with_dynamiq_errors { connection.get("/queues/#{queue}/messages/#{batch_size}") }
         return JSON.parse(resp.body) if resp.status == 200
         []
       rescue => e
@@ -216,7 +221,7 @@ module Dynamiq
     #
     def queue_details(queue)
       begin
-        resp = connection.get("/queues/#{queue}")
+        resp = with_dynamiq_errors { connection.get("/queues/#{queue}") }
         return JSON.parse(resp.body) if resp.status == 200
         nil
       rescue => e
@@ -234,7 +239,7 @@ module Dynamiq
     #
     def known_queues
       begin
-        resp = connection.get("/queues")
+        resp = with_dynamiq_errors { connection.get("/queues") }
         return JSON.parse(resp.body)["queues"] if resp.status == 200
         []
       rescue => e
@@ -252,7 +257,7 @@ module Dynamiq
     #
     def known_topics
       begin
-        resp = connection.get("/topics")
+        resp = with_dynamiq_errors { connection.get("/topics") }
         return JSON.parse(resp.body)["topics"] if resp.status == 200
         []
       rescue => e
@@ -266,6 +271,14 @@ module Dynamiq
         c.options.timeout = self.connection_timeout
         c.adapter  Faraday.default_adapter
       end
+    end
+
+    def with_dynamiq_errors
+      yield
+    rescue Faraday::Error::ConnectionFailed => e
+      raise ConnectionError, e
+    rescue Faraday::Error::TimeoutError => e
+      raise TimeoutError, e
     end
   end
 end

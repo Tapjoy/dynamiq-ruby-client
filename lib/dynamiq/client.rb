@@ -29,7 +29,7 @@ module Dynamiq
         with_dynamiq_errors { connection.put("/topics/#{topic}") }
         true
       rescue => e
-        ::Dynamiq.logger.error "an error occured when creating a topic #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when creating a topic - #{e.inspect}: #{e.message}"
         false
       end
     end
@@ -48,7 +48,7 @@ module Dynamiq
         with_dynamiq_errors { connection.put("/queues/#{queue}") }
         true
       rescue => e
-        ::Dynamiq.logger.error "an error occured when creating a queue #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when creating a queue - #{e.inspect}: #{e.message}"
         false
       end
     end
@@ -66,7 +66,7 @@ module Dynamiq
         with_dynamiq_errors { connection.delete("/topics/#{topic}") }
         true
       rescue => e
-        ::Dynamiq.logger.error "an error occured when deleting a topic #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when deleting a topic - #{e.inspect}: #{e.message}"
         false
       end
     end
@@ -84,7 +84,7 @@ module Dynamiq
         with_dynamiq_errors { connection.delete("/queues/#{queue}") }
         true
       rescue => e
-        ::Dynamiq.logger.error "an error occured when deleting a queue #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when deleting a queue - #{e.inspect}: #{e.message}"
         false
       end
     end
@@ -103,7 +103,7 @@ module Dynamiq
         with_dynamiq_errors { connection.put("/topics/#{topic}/queues/#{queue}") }
         true
       rescue => e
-        ::Dynamiq.logger.error "an error occured when assigning a queue to a topic #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when assigning a queue to a topic - #{e.inspect}: #{e.message}"
         false
       end
     end
@@ -129,7 +129,7 @@ module Dynamiq
           end
         end
       rescue => e
-        ::Dynamiq.logger.error "an error occured when updating the configuration for a queue #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when updating the configuration for a queue - #{e.inspect}: #{e.message}"
         false
       end
     end
@@ -148,7 +148,7 @@ module Dynamiq
         with_dynamiq_errors { connection.put("/topics/#{topic}/message", data) }
         true
       rescue => e
-        ::Dynamiq.logger.error "an error occured when publishing #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when publishing - #{e.inspect}: #{e.message}"
         false
       end
     end
@@ -167,7 +167,7 @@ module Dynamiq
         with_dynamiq_errors { connection.put("/queues/#{queue}/message", data) }
         true
       rescue => e
-        ::Dynamiq.logger.error "an error occured when publishing #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when publishing - #{e.inspect}: #{e.message}"
         false
       end
     end
@@ -186,7 +186,7 @@ module Dynamiq
         with_dynamiq_errors { connection.delete("/queues/#{queue}/message/#{message_id}") }
         true
       rescue => e
-        ::Dynamiq.logger.error "an error occured when acknowledging #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when acknowledging - #{e.inspect}: #{e.message}"
         false
       end
     end
@@ -206,7 +206,7 @@ module Dynamiq
         return JSON.parse(resp.body) if resp.status == 200
         []
       rescue => e
-        ::Dynamiq.logger.error "an error occured when receiving messages #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when receiving messages - #{e.inspect}: #{e.message}"
         []
       end
     end
@@ -225,7 +225,7 @@ module Dynamiq
         return JSON.parse(resp.body) if resp.status == 200
         nil
       rescue => e
-        ::Dynamiq.logger.error "an error occured when acquiring details for queue #{queue} #{e.inspect}"
+        ::Dynamiq.logger.error "an error occured when acquiring details for queue '#{queue}' - #{e.inspect}: #{e.message}"
         nil
       end
     end
@@ -243,7 +243,7 @@ module Dynamiq
         return JSON.parse(resp.body)["queues"] if resp.status == 200
         []
       rescue => e
-        ::Dynamiq.logger.error "an error occured when listing the known queues"
+        ::Dynamiq.logger.error "an error occured when listing the known queues - #{e.inspect}: #{e.message}"
         []
       end
     end
@@ -261,7 +261,7 @@ module Dynamiq
         return JSON.parse(resp.body)["topics"] if resp.status == 200
         []
       rescue => e
-        ::Dynamiq.logger.error "an error occured when listing the known topics"
+        ::Dynamiq.logger.error "an error occured when listing the known topics - #{e.inspect}: #{e.message}"
         []
       end
     end

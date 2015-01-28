@@ -100,8 +100,10 @@ module Dynamiq
     #
     def subscribe_queue(topic, queue)
       begin
-        with_dynamiq_errors { connection.put("/topics/#{topic}/queues/#{queue}") }
-        true
+        resp = with_dynamiq_errors { connection.put("/topics/#{topic}/queues/#{queue}") }
+        return true if resp.status == 200
+        ::Dynamiq.logger.error "an error occured when assigning a queue to a topic - status code #{resp.status}: #{resp.body}"
+        false
       rescue => e
         ::Dynamiq.logger.error "an error occured when assigning a queue to a topic - #{e.inspect}: #{e.message}"
         false
@@ -204,10 +206,11 @@ module Dynamiq
       begin
         resp = with_dynamiq_errors { connection.get("/queues/#{queue}/messages/#{batch_size}") }
         return JSON.parse(resp.body) if resp.status == 200
-        []
+        raise ArgumentError, resp.body if [404,422].include?(resp.status)
+        raise StandardError, resp.body
       rescue => e
         ::Dynamiq.logger.error "an error occured when receiving messages - #{e.inspect}: #{e.message}"
-        []
+        raise
       end
     end
 
@@ -223,6 +226,9 @@ module Dynamiq
       begin
         resp = with_dynamiq_errors { connection.get("/queues/#{queue}") }
         return JSON.parse(resp.body) if resp.status == 200
+        if resp.status == 404
+          ::Dynamiq.logger.warn "tried to acquire details for queue '#{queue}' which does not exist"
+        end
         nil
       rescue => e
         ::Dynamiq.logger.error "an error occured when acquiring details for queue '#{queue}' - #{e.inspect}: #{e.message}"

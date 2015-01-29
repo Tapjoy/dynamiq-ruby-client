@@ -125,6 +125,22 @@ describe Dynamiq::Client do
       subject.subscribe_queue(topic_name, queue_name)
     end
 
+    context 'when code is not 200' do
+      let(:response) { Faraday::Response.new({:status=>404, :body => '{}'}) }
+      before(:each) do
+        conn.stub(:put).and_return(response)
+      end
+
+      it 'should log error' do
+        ::Dynamiq.logger.should_receive(:error)
+        subject.subscribe_queue(topic_name, queue_name)
+      end
+
+      it 'should return false' do
+        expect(subject.subscribe_queue(topic_name, queue_name)).to eq(false)
+      end
+    end
+
     context 'on failure' do
       before :each do
         conn.stub(:put).and_raise
@@ -233,22 +249,41 @@ describe Dynamiq::Client do
       conn.stub(:get).and_return(response)
     end
 
+    shared_examples 'should log with failure and raise exception' do
+      it 'should log with failure and raise exception' do
+        ::Dynamiq.logger.should_receive(:error)
+        expect { subject.receive('q', 11) }.to raise_exception
+      end
+    end
+
     it 'should GET a message batch from queue' do
       conn.should_receive(:get).with("/queues/q/messages/11")
       expect(subject.receive('q', 11)).to eq({})
     end
 
-    it 'should return an empty array for non 200s' do
-      r = Faraday::Response.new({:status=>404, :body => '{}'})
-      conn.stub(:get).and_return(r)
+    context 'when status code is not 200' do
+      let(:response_status) { 400 }
+      let(:response) { Faraday::Response.new({:status=>response_status, :body => '{}'}) }
 
-      expect(subject.receive('q')).to eq([])
+      include_examples 'should log with failure and raise exception'
+
+      [404,422].each do |status|
+        context "when status code is #{status}" do
+          let(:response_status) { status }
+
+          include_examples 'should log with failure and raise exception'
+
+          it 'should raise ArgumentError' do
+            expect { subject.receive('q', 11) }.to raise_exception(ArgumentError)
+          end
+        end
+      end
     end
 
-    it 'should log with failure' do
-      conn.stub(:get).and_raise
-      ::Dynamiq.logger.should_receive(:error)
-      subject.receive('q', 11)
+    context 'when an exception is raised in get' do
+      before(:each) { conn.stub(:get).and_raise }
+
+      include_examples 'should log with failure and raise exception'
     end
   end
 
@@ -263,10 +298,17 @@ describe Dynamiq::Client do
     end
 
     it 'should return nil for non 200s' do
-      r = Faraday::Response.new({:status=>404, :body => '{}'})
+      r = Faraday::Response.new({:status=>400, :body => '{}'})
       conn.stub(:get).and_return(r)
 
       expect(subject.queue_details('q')).to eq(nil)
+    end
+
+    it 'should log warning for 404s' do
+      r = Faraday::Response.new({:status=>404, :body => '{}'})
+      conn.stub(:get).and_return(r)
+      ::Dynamiq.logger.should_receive(:warn)
+      subject.queue_details('q')
     end
 
     it 'should log with failure' do

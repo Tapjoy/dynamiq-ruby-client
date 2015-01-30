@@ -4,8 +4,7 @@ describe Dynamiq::Client do
   let (:topic_name) {"test_topic"}
   let (:queue_name) {"test_queue"}
   let (:url) {'http://example.io'}
-  let (:port) {'9999'}
-  let (:conn) {Faraday.new(:url=>"#{url}:#{port}") }
+  let (:port) {9999}
   let (:response) {Faraday::Response.new({:status=>200, :body => '{}'})}
   let (:connection_timeout) {5}
   let (:client_options) {{:connection_timeout=>connection_timeout}}
@@ -14,6 +13,20 @@ describe Dynamiq::Client do
 
   before :each do
     ::Dynamiq.logger.stub(:error)
+  end
+
+  context '#connection' do
+    it 'includes url in url prefix' do
+      expect(conn.url_prefix.to_s).to match(/^#{url}/)
+    end
+
+    it 'includes port in url prefix' do
+      expect(conn.url_prefix.port).to eq(port)
+    end
+
+    it 'includes api version in url prefix' do
+      expect(conn.url_prefix.to_s).to match(%r(/#{subject.class::API_VERSION}$))
+    end
   end
 
   context '#initialize' do
@@ -33,7 +46,7 @@ describe Dynamiq::Client do
 
   context '#create_topic' do
     it 'should PUT the topic name' do
-      conn.should_receive(:put).with("/topics/#{topic_name}")
+      conn.should_receive(:put).with("topics/#{topic_name}")
       subject.create_topic(topic_name)
     end
 
@@ -55,7 +68,7 @@ describe Dynamiq::Client do
 
   context '#create_queue' do
     it 'should PUT the queue name' do
-      conn.should_receive(:put).with("/queues/#{queue_name}")
+      conn.should_receive(:put).with("queues/#{queue_name}")
       subject.create_queue(queue_name)
     end
 
@@ -77,7 +90,7 @@ describe Dynamiq::Client do
 
   context '#delete_topic' do
     it 'should DELETE the topic name' do
-      conn.should_receive(:delete).with("/topics/#{topic_name}")
+      conn.should_receive(:delete).with("topics/#{topic_name}")
       subject.delete_topic(topic_name)
     end
 
@@ -99,7 +112,7 @@ describe Dynamiq::Client do
 
   context '#delete_queue' do
     it 'should DELETE the queue name' do
-      conn.should_receive(:delete).with("/queues/#{queue_name}")
+      conn.should_receive(:delete).with("queues/#{queue_name}")
       subject.delete_queue(queue_name)
     end
 
@@ -121,7 +134,7 @@ describe Dynamiq::Client do
 
   context '#subscribe_queue' do
     it 'should PUT the topic and queue names' do
-      conn.should_receive(:put).with("/topics/#{topic_name}/queues/#{queue_name}")
+      conn.should_receive(:put).with("topics/#{topic_name}/queues/#{queue_name}")
       subject.subscribe_queue(topic_name, queue_name)
     end
 
@@ -189,7 +202,7 @@ describe Dynamiq::Client do
 
   context '#publish' do
     it 'should PUT message to topic' do
-      conn.should_receive(:put).with("/topics/#{topic_name}/message", {:x=>'y'})
+      conn.should_receive(:put).with("topics/#{topic_name}/message", {:x=>'y'})
       subject.publish(topic_name, {:x=>'y'})
     end
 
@@ -211,7 +224,7 @@ describe Dynamiq::Client do
 
   context '#enqueue' do
     it 'should PUT message to the queue' do
-      conn.should_receive(:put).with("/queues/#{queue_name}/message", {:x=>'y'})
+      conn.should_receive(:put).with("queues/#{queue_name}/message", {:x=>'y'})
       subject.enqueue(queue_name, {:x=>'y'})
     end
 
@@ -233,7 +246,7 @@ describe Dynamiq::Client do
 
   context '#acknowledge' do
     it 'should DELETE message from queue' do
-      conn.should_receive(:delete).with("/queues/q/message/id")
+      conn.should_receive(:delete).with("queues/q/message/id")
       subject.acknowledge('q', 'id')
     end
 
@@ -257,7 +270,7 @@ describe Dynamiq::Client do
     end
 
     it 'should GET a message batch from queue' do
-      conn.should_receive(:get).with("/queues/q/messages/11")
+      conn.should_receive(:get).with("queues/q/messages/11")
       expect(subject.receive('q', 11)).to eq({})
     end
 
@@ -293,7 +306,7 @@ describe Dynamiq::Client do
     end
 
     it 'should GET queue details' do
-      conn.should_receive(:get).with("/queues/q")
+      conn.should_receive(:get).with("queues/q")
       expect(subject.queue_details('q')).to eq({})
     end
 
@@ -325,7 +338,7 @@ describe Dynamiq::Client do
     end
 
     it 'should GET the known list of queues' do
-      conn.should_receive(:get).with("/queues")
+      conn.should_receive(:get).with("queues")
       expect(subject.known_queues).to eq([])
     end
 
@@ -350,7 +363,7 @@ describe Dynamiq::Client do
     end
 
     it 'should GET the known list of topics' do
-      conn.should_receive(:get).with("/topics")
+      conn.should_receive(:get).with("topics")
       expect(subject.known_topics).to eq([])
     end
 

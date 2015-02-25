@@ -214,7 +214,7 @@ describe Dynamiq::Client do
 
       it 'should return an array of valid message ids' do
         resp = subject.publish(topic_name, {:x=>'y'})
-        resp.should eq({"q1"=>"123", "q2"=>"456"})
+        expect(resp).to eq({"q1"=>"123", "q2"=>"456"})
       end
     end
 
@@ -248,7 +248,7 @@ describe Dynamiq::Client do
   
       it 'should return a valid message id' do
         resp = subject.enqueue(queue_name, {:x=>'y'})
-        resp.should eq("123")
+        expect(resp).to eq("123")
       end
     end
 

@@ -4,6 +4,6 @@ describe Dynamiq do
   subject {::Dynamiq}
 
   it "should respond to logger" do
-    subject.respond_to?(:logger).should == true
+    expect(subject.respond_to?(:logger)).to eq(true)
   end
 end

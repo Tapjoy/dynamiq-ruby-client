@@ -201,9 +201,21 @@ describe Dynamiq::Client do
   end
 
   context '#publish' do
-    it 'should PUT message to topic' do
-      conn.should_receive(:put).with("topics/#{topic_name}/message", {:x=>'y'})
-      subject.publish(topic_name, {:x=>'y'})
+    context 'on success' do
+      let (:response) {Faraday::Response.new({:status=>200, :body => '{"q1":"123", "q2":"456"}'})}
+      before(:each) do
+        conn.stub(:put).and_return(response)
+      end
+
+      it 'should PUT message to topic' do
+        conn.should_receive(:put).with("topics/#{topic_name}/message", {:x=>'y'})
+        subject.publish(topic_name, {:x=>'y'})
+      end
+
+      it 'should return an array of valid message ids' do
+        resp = subject.publish(topic_name, {:x=>'y'})
+        resp.should eq({"q1"=>"123", "q2"=>"456"})
+      end
     end
 
     context 'on failure' do
@@ -216,16 +228,28 @@ describe Dynamiq::Client do
         subject.publish(topic_name, {:x=>'y'})
       end
 
-      it 'should return false' do
-        expect(subject.publish(topic_name, {:x=>'y'})).to eq(false)
+      it 'should return an empty hash' do
+        expect(subject.publish(topic_name, {:x=>'y'})).to eq({})
       end
     end
   end
 
   context '#enqueue' do
-    it 'should PUT message to the queue' do
-      conn.should_receive(:put).with("queues/#{queue_name}/message", {:x=>'y'})
-      subject.enqueue(queue_name, {:x=>'y'})
+    context 'on success' do
+      let (:response) {Faraday::Response.new({:status=>200, :body => "123"})}
+      before(:each) do
+        conn.stub(:put).and_return(response)
+      end
+      
+      it 'should PUT message to the queue' do
+        conn.should_receive(:put).with("queues/#{queue_name}/message", {:x=>'y'})
+        subject.enqueue(queue_name, {:x=>'y'})
+      end
+  
+      it 'should return a valid message id' do
+        resp = subject.enqueue(queue_name, {:x=>'y'})
+        resp.should eq("123")
+      end
     end
 
     context 'on failure' do
@@ -238,8 +262,8 @@ describe Dynamiq::Client do
         subject.enqueue(queue_name, {:x=>'y'})
       end
 
-      it 'should return false' do
-        expect(subject.enqueue(queue_name, {:x=>'y'})).to eq(false)
+      it 'should return an empty string' do
+        expect(subject.enqueue(queue_name, {:x=>'y'})).to eq("")
       end
     end
   end

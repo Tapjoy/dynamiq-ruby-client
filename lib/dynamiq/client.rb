@@ -149,11 +149,12 @@ module Dynamiq
     #
     def publish(topic, data)
       begin
-        handle_errors { connection.put("topics/#{topic}/message", data) }
-        true
+        resp = handle_errors { connection.put("topics/#{topic}/message", data) }
+        return JSON.parse(resp.body) if resp.status == 200
+        {}
       rescue => e
         ::Dynamiq.logger.error "an error occured when publishing - #{e.inspect}: #{e.message}"
-        false
+        {}
       end
     end
 
@@ -168,11 +169,12 @@ module Dynamiq
     #
     def enqueue(queue, data)
       begin
-        handle_errors { connection.put("queues/#{queue}/message", data) }
-        true
+        resp = handle_errors { connection.put("queues/#{queue}/message", data) }
+        return resp.body if resp.status == 200
+        ""
       rescue => e
         ::Dynamiq.logger.error "an error occured when publishing - #{e.inspect}: #{e.message}"
-        false
+        ""
       end
     end
 

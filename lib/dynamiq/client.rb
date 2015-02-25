@@ -279,7 +279,8 @@ module Dynamiq
     def connection
       @connection ||= Faraday.new(:url=>"#{@url}:#{@port}") do |c|
         c.options.timeout = self.connection_timeout
-        c.adapter  Faraday.default_adapter
+        c.request :retry, :max => 3
+        c.adapter Faraday.default_adapter
         c.path_prefix = API_VERSION
       end
     end

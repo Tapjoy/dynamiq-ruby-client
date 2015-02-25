@@ -219,17 +219,34 @@ describe Dynamiq::Client do
     end
 
     context 'on failure' do
-      before :each do
-        conn.stub(:put).and_raise
+      context 'in the transport layer' do
+        before :each do
+          conn.stub(:put).and_raise
+        end
+  
+        it 'should log the error' do
+          ::Dynamiq.logger.should_receive(:error)
+          subject.publish(topic_name, {:x=>'y'})
+        end
+  
+        it 'should return an empty hash' do
+          expect(subject.publish(topic_name, {:x=>'y'})).to eq({})
+        end
       end
 
-      it 'should log the error' do
-        ::Dynamiq.logger.should_receive(:error)
-        subject.publish(topic_name, {:x=>'y'})
-      end
+      context 'in the application layer' do      
+        let (:bad_response) {Faraday::Response.new({:status=>500, :body => 'error'})}
+        let (:good_response) {Faraday::Response.new({:status=>500, :body => '{"q1":"123", "q2":"456"}'})}
 
-      it 'should return an empty hash' do
-        expect(subject.publish(topic_name, {:x=>'y'})).to eq({})
+        let (:client_options) {{:connection_timeout=>connection_timeout, :retry_count=>2}}
+        before(:each) do
+          conn.stub(:put).and_return(bad_response, bad_response, good_response)
+        end
+
+        it 'will retry upto the configured number of times' do
+          conn.should_receive(:put).exactly(3).times
+          resp = subject.publish(topic_name, {:x=>'y'})
+        end
       end
     end
   end
@@ -253,17 +270,34 @@ describe Dynamiq::Client do
     end
 
     context 'on failure' do
-      before :each do
-        conn.stub(:put).and_raise
+      context 'in the transport layer' do
+        before :each do
+          conn.stub(:put).and_raise
+        end
+  
+        it 'should log the error' do
+          ::Dynamiq.logger.should_receive(:error)
+          subject.enqueue(queue_name, {:x=>'y'})
+        end
+  
+        it 'should return an empty string' do
+          expect(subject.enqueue(queue_name, {:x=>'y'})).to eq("")
+        end
       end
 
-      it 'should log the error' do
-        ::Dynamiq.logger.should_receive(:error)
-        subject.enqueue(queue_name, {:x=>'y'})
-      end
+      context 'in the application layer' do
+        let (:bad_response) {Faraday::Response.new({:status=>500, :body => 'error'})}
+        let (:good_response) {Faraday::Response.new({:status=>500, :body => '{"q1":"123", "q2":"456"}'})}
 
-      it 'should return an empty string' do
-        expect(subject.enqueue(queue_name, {:x=>'y'})).to eq("")
+        let (:client_options) {{:connection_timeout=>connection_timeout, :retry_count=>2}}
+        before(:each) do
+          conn.stub(:put).and_return(bad_response, bad_response, good_response)
+        end
+
+        it 'will retry upto the configured number of times' do
+          conn.should_receive(:put).exactly(3).times
+          resp = subject.enqueue(topic_name, {:x=>'y'})
+        end
       end
     end
   end

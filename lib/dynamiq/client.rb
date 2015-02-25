@@ -4,17 +4,19 @@ require 'json'
 module Dynamiq
   class Client
     DEFAULT_CONNECTION_TIMEOUT = 2
+    DEFAULT_RETRY_COUNT = 2
     API_VERSION = 'v1'
 
     class ConnectionError < Faraday::Error::ConnectionFailed; end
     class TimeoutError < Faraday::Error::TimeoutError; end
 
-    attr_reader :connection_timeout
+    attr_reader :connection_timeout, :retry_count
 
     def initialize(url, port, opts={})
       @url = url
       @port = port
       @connection_timeout = opts[:connection_timeout] || DEFAULT_CONNECTION_TIMEOUT
+      @retry_count = opts[:retry_count] || DEFAULT_RETRY_COUNT
     end
 
     # Create a Dynamiq topic, if it does not already exist on the server
@@ -149,7 +151,7 @@ module Dynamiq
     #
     def publish(topic, data)
       begin
-        resp = handle_errors { connection.put("topics/#{topic}/message", data) }
+        resp = retry_unless(200) { handle_errors { connection.put("topics/#{topic}/message", data) } }
         return JSON.parse(resp.body) if resp.status == 200
         {}
       rescue => e
@@ -169,7 +171,7 @@ module Dynamiq
     #
     def enqueue(queue, data)
       begin
-        resp = handle_errors { connection.put("queues/#{queue}/message", data) }
+        resp = retry_unless(200) { handle_errors { connection.put("queues/#{queue}/message", data) } }
         return resp.body if resp.status == 200
         ""
       rescue => e
@@ -291,6 +293,17 @@ module Dynamiq
       raise ConnectionError, e
     rescue Faraday::Error::TimeoutError => e
       raise TimeoutError, e
+    end
+
+    def retry_unless(status_code)
+      retries_left = self.retry_count
+      result = yield
+      while result.status != status_code && retries_left > 0
+        retries_left = retries_left - 1
+        # Because we're not using a rescue, we can't use the retry keyword
+        result = yield
+      end
+      return result
     end
   end
 end

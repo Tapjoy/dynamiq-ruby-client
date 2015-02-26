@@ -9,6 +9,7 @@ module Dynamiq
 
     class ConnectionError < Faraday::Error::ConnectionFailed; end
     class TimeoutError < Faraday::Error::TimeoutError; end
+    class MessageDeliveryError < RuntimeError; end
 
     attr_reader :connection_timeout, :retry_count
 
@@ -150,14 +151,9 @@ module Dynamiq
     # true
     #
     def publish(topic, data)
-      begin
-        resp = retry_unless(200) { handle_errors { connection.put("topics/#{topic}/message", data) } }
-        return JSON.parse(resp.body) if resp.status == 200
-        {}
-      rescue => e
-        ::Dynamiq.logger.error "an error occured when publishing - #{e.inspect}: #{e.message}"
-        {}
-      end
+      resp = retry_unless(200) { handle_errors { connection.put("topics/#{topic}/message", data) } }
+      raise MessageDeliveryError unless resp.status == 200
+      JSON.parse(resp.body)
     end
 
     # Enqueue to a Dynamiq queue directly
@@ -170,14 +166,9 @@ module Dynamiq
     # true
     #
     def enqueue(queue, data)
-      begin
-        resp = retry_unless(200) { handle_errors { connection.put("queues/#{queue}/message", data) } }
-        return resp.body if resp.status == 200
-        ""
-      rescue => e
-        ::Dynamiq.logger.error "an error occured when publishing - #{e.inspect}: #{e.message}"
-        ""
-      end
+      resp = retry_unless(200) { handle_errors { connection.put("queues/#{queue}/message", data) } }
+      raise MessageDeliveryError unless resp.status == 200
+      resp.body 
     end
 
     # Ack a Dynamiq message

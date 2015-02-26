@@ -221,22 +221,17 @@ describe Dynamiq::Client do
     context 'on failure' do
       context 'in the transport layer' do
         before :each do
-          conn.stub(:put).and_raise
+          conn.stub(:put).and_raise(Faraday::Error::ConnectionFailed.new(ArgumentError.new))
         end
   
         it 'should log the error' do
-          ::Dynamiq.logger.should_receive(:error)
-          subject.publish(topic_name, {:x=>'y'})
-        end
-  
-        it 'should return an empty hash' do
-          expect(subject.publish(topic_name, {:x=>'y'})).to eq({})
+          expect { subject.publish(queue_name, {:x=>'y'}) }.to raise_error(Dynamiq::Client::ConnectionError)
         end
       end
 
       context 'in the application layer' do      
         let (:bad_response) {Faraday::Response.new({:status=>500, :body => 'error'})}
-        let (:good_response) {Faraday::Response.new({:status=>500, :body => '{"q1":"123", "q2":"456"}'})}
+        let (:good_response) {Faraday::Response.new({:status=>200, :body => '{"q1":"123", "q2":"456"}'})}
 
         let (:client_options) {{:connection_timeout=>connection_timeout, :retry_count=>2}}
         before(:each) do
@@ -272,22 +267,17 @@ describe Dynamiq::Client do
     context 'on failure' do
       context 'in the transport layer' do
         before :each do
-          conn.stub(:put).and_raise
+          conn.stub(:put).and_raise(Faraday::Error::ConnectionFailed.new(ArgumentError.new))
         end
   
-        it 'should log the error' do
-          ::Dynamiq.logger.should_receive(:error)
-          subject.enqueue(queue_name, {:x=>'y'})
-        end
-  
-        it 'should return an empty string' do
-          expect(subject.enqueue(queue_name, {:x=>'y'})).to eq("")
+        it 'should raise the error' do
+          expect { subject.enqueue(queue_name, {:x=>'y'})}.to raise_error(Dynamiq::Client::ConnectionError)
         end
       end
 
       context 'in the application layer' do
         let (:bad_response) {Faraday::Response.new({:status=>500, :body => 'error'})}
-        let (:good_response) {Faraday::Response.new({:status=>500, :body => '{"q1":"123", "q2":"456"}'})}
+        let (:good_response) {Faraday::Response.new({:status=>200, :body => '{"q1":"123", "q2":"456"}'})}
 
         let (:client_options) {{:connection_timeout=>connection_timeout, :retry_count=>2}}
         before(:each) do

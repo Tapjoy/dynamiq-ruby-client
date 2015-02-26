@@ -323,7 +323,7 @@ describe Dynamiq::Client do
     end
 
     context 'when status code is not 200' do
-      let(:response_status) { 400 }
+      let(:response_status) { 404 }
       let(:response) { Faraday::Response.new({:status=>response_status, :body => '{}'}) }
 
       include_examples 'should log with failure and raise exception'
@@ -335,7 +335,7 @@ describe Dynamiq::Client do
           include_examples 'should log with failure and raise exception'
 
           it 'should raise ArgumentError' do
-            expect { subject.receive('q', 11) }.to raise_exception(ArgumentError)
+            expect { subject.receive('q', 11) }.to raise_exception(Dynamiq::Client::ObjectDoesNotExistError)
           end
         end
       end
@@ -405,27 +405,21 @@ describe Dynamiq::Client do
   end
 
   context '#known_topics' do
-    let (:response) {Faraday::Response.new({:status=>200, :body => '[]'})}
+    let (:response) {Faraday::Response.new({:status=>200, :body => '{"topics": ["t1","t2"]}'})}
     before (:each) do
       conn.stub(:get).and_return(response)
     end
 
     it 'should GET the known list of topics' do
       conn.should_receive(:get).with("topics")
-      expect(subject.known_topics).to eq([])
+      expect(subject.known_topics).to eq(["t1","t2"])
     end
 
-    it 'should return an empty array for non 200s' do
+    it 'should raise an exception if we dont get a 200' do
       r = Faraday::Response.new({:status=>404, :body => '{}'})
       conn.stub(:get).and_return(r)
 
-      expect(subject.known_topics).to eq([])
-    end
-
-    it 'should log with failure' do
-      conn.stub(:get).and_raise
-      ::Dynamiq.logger.should_receive(:error)
-      subject.known_topics
+      expect{subject.known_topics}.to raise_exception(Dynamiq::Client::ConnectionError) 
     end
   end
 end

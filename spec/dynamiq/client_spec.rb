@@ -11,10 +11,6 @@ describe Dynamiq::Client do
   subject (:client) {Dynamiq::Client.new(url,port, client_options)}
   let(:conn) { subject.connection } 
 
-  before :each do
-    ::Dynamiq.logger.stub(:error)
-  end
-
   context '#connection' do
     it 'includes url in url prefix' do
       expect(conn.url_prefix.to_s).to match(/^#{url}/)
@@ -45,127 +41,96 @@ describe Dynamiq::Client do
   end
 
   context '#create_topic' do
+    let (:response) {Faraday::Response.new({:status=>201, :body => ''})}
+    before :each do
+      conn.stub(:put).and_return(response)
+    end
+
     it 'should PUT the topic name' do
       conn.should_receive(:put).with("topics/#{topic_name}")
       subject.create_topic(topic_name)
     end
 
     context 'on failure' do
-      before :each do
-        conn.stub(:put).and_raise
-      end
+      context "when the topic already existed" do
+        let (:response) {Faraday::Response.new({:status=>422, :body => '{"error":"blah"}'})}
 
-      it 'should log the error' do
-        ::Dynamiq.logger.should_receive(:error)
-        subject.create_topic(topic_name)
-      end
-
-      it 'should return false' do
-        expect(subject.create_topic(topic_name)).to eq(false)
+        it 'should raise an error' do
+          expect{subject.create_topic(topic_name)}.to raise_error(Dynamiq::Client::ObjectAlreadyExistsError)
+        end
       end
     end
   end
 
   context '#create_queue' do
+    let (:response) {Faraday::Response.new({:status=>201, :body => ''})}
+    before :each do
+      conn.stub(:put).and_return(response)
+    end
+
     it 'should PUT the queue name' do
       conn.should_receive(:put).with("queues/#{queue_name}")
       subject.create_queue(queue_name)
     end
 
     context 'on failure' do
-      before :each do
-        conn.stub(:put).and_raise
-      end
+      context "when the queue already existed" do
+        let (:response) {Faraday::Response.new({:status=>422, :body => '{"error":"blah"}'})}
 
-      it 'should log the error' do
-        ::Dynamiq.logger.should_receive(:error)
-        subject.create_queue(queue_name)
-      end
-
-      it 'should return false' do
-        expect(subject.create_queue(queue_name)).to eq(false)
+        it 'should raise an error' do
+          expect{subject.create_queue(queue_name)}.to raise_error(Dynamiq::Client::ObjectAlreadyExistsError)
+        end
       end
     end
   end
 
   context '#delete_topic' do
+    let (:response) {Faraday::Response.new({:status=>200, :body => ''})}
+    before :each do
+      conn.stub(:delete).and_return(response)
+    end
+
     it 'should DELETE the topic name' do
       conn.should_receive(:delete).with("topics/#{topic_name}")
       subject.delete_topic(topic_name)
     end
 
     context 'on failure' do
-      before :each do
-        conn.stub(:delete).and_raise
+      context 'when the topic did not exist' do
+        let (:response) {Faraday::Response.new({:status=>404, :body => '{"error":"error"}'})}
+
+        it "should raise an ObjectDoesNotExistError" do
+          expect {subject.delete_topic(topic_name)}.to raise_error(Dynamiq::Client::ObjectDoesNotExistError)
+        end
       end
 
-      it 'should log the error' do
-        ::Dynamiq.logger.should_receive(:error)
-        subject.create_queue(queue_name)
-      end
+      context 'when there is something other than a 200 or 404' do
+        let (:response) {Faraday::Response.new({:status=>500, :body => ''})}
 
-      it 'should return false' do
-        expect(subject.create_queue(queue_name)).to eq(false)
-      end
-    end
-  end
-
-  context '#delete_queue' do
-    it 'should DELETE the queue name' do
-      conn.should_receive(:delete).with("queues/#{queue_name}")
-      subject.delete_queue(queue_name)
-    end
-
-    context 'on failure' do
-      before :each do
-        conn.stub(:delete).and_raise
-      end
-
-      it 'should log the error' do
-        ::Dynamiq.logger.should_receive(:error)
-        subject.create_queue(queue_name)
-      end
-
-      it 'should return false' do
-        expect(subject.create_queue(queue_name)).to eq(false)
+        it "should raise a ConnectionError" do
+          expect {subject.delete_topic(topic_name)}.to raise_error(Dynamiq::Client::ConnectionError)
+        end
       end
     end
   end
 
   context '#subscribe_queue' do
+    let(:response) { Faraday::Response.new({:status=>200, :body => '{"Queues":["q1","q2"]}'}) }
+    before(:each) do
+      conn.stub(:put).and_return(response)
+    end
+
     it 'should PUT the topic and queue names' do
       conn.should_receive(:put).with("topics/#{topic_name}/queues/#{queue_name}")
       subject.subscribe_queue(topic_name, queue_name)
     end
 
-    context 'when code is not 200' do
-      let(:response) { Faraday::Response.new({:status=>404, :body => '{}'}) }
-      before(:each) do
-        conn.stub(:put).and_return(response)
-      end
-
-      it 'should log error' do
-        ::Dynamiq.logger.should_receive(:error)
-        subject.subscribe_queue(topic_name, queue_name)
-      end
-
-      it 'should return false' do
-        expect(subject.subscribe_queue(topic_name, queue_name)).to eq(false)
-      end
-    end
-
     context 'on failure' do
-      before :each do
-        conn.stub(:put).and_raise
-      end
-
-      it 'should log the error' do
-        ::Dynamiq.logger.should_receive(:error)
-        subject.subscribe_queue(topic_name, queue_name)
-      end
-
-      it 'should return false' do
-        expect(subject.subscribe_queue(topic_name, queue_name)).to eq(false)
+      context 'when either the queue or topic do not exist' do
+        let(:response) { Faraday::Response.new({:status=>422, :body => '{}'}) }
+        it "raises an ObjectDoesNotExistError" do
+          expect{subject.subscribe_queue(topic_name, queue_name)}.to raise_error(Dynamiq::Client::ObjectDoesNotExistError)
+        end
       end
     end
   end
@@ -178,24 +143,22 @@ describe Dynamiq::Client do
         :max_partitions=>10
       }
     }
+    let(:response) { Faraday::Response.new({:status=>200, :body => '{}'}) }
+    before(:each) do
+      conn.stub(:patch).and_return(response)
+    end
 
     it 'should PATCH the queue name with option data' do
       conn.should_receive(:patch)
       subject.configure_queue(queue_name, config_data)
     end
 
-    context 'on failure' do
-      before :each do
-        conn.stub(:patch).and_raise
-      end
+    context 'on non 200' do
+      let(:response) { Faraday::Response.new({:status=>501, :body => '{}'}) }
 
-      it 'should log the error' do
-        ::Dynamiq.logger.should_receive(:error)
-        subject.configure_queue(queue_name, config_data)
-      end
 
-      it 'should return false' do
-        expect(subject.configure_queue(queue_name, config_data)).to eq(false)
+      it 'should raise a ConnectionError' do
+        expect{subject.configure_queue(queue_name, config_data)}.to raise_error(Dynamiq::Client::ConnectionError)
       end
     end
   end
@@ -224,7 +187,7 @@ describe Dynamiq::Client do
           conn.stub(:put).and_raise(Faraday::Error::ConnectionFailed.new(ArgumentError.new))
         end
   
-        it 'should log the error' do
+        it 'should raise an error' do
           expect { subject.publish(queue_name, {:x=>'y'}) }.to raise_error(Dynamiq::Client::ConnectionError)
         end
       end
@@ -293,15 +256,13 @@ describe Dynamiq::Client do
   end
 
   context '#acknowledge' do
+    before (:each) do
+      conn.stub(:delete).and_return(response)
+    end
+
     it 'should DELETE message from queue' do
       conn.should_receive(:delete).with("queues/q/message/id")
       subject.acknowledge('q', 'id')
-    end
-
-    it 'should log with failure' do
-      conn.stub(:delete).and_raise
-      ::Dynamiq.logger.should_receive(:error)
-      expect(subject.acknowledge('q', 'id')).to eq(false)
     end
   end
 
@@ -310,97 +271,73 @@ describe Dynamiq::Client do
       conn.stub(:get).and_return(response)
     end
 
-    shared_examples 'should log with failure and raise exception' do
-      it 'should log with failure and raise exception' do
-        ::Dynamiq.logger.should_receive(:error)
-        expect { subject.receive('q', 11) }.to raise_exception
-      end
-    end
-
     it 'should GET a message batch from queue' do
       conn.should_receive(:get).with("queues/q/messages/11")
       expect(subject.receive('q', 11)).to eq({})
     end
 
     context 'when status code is not 200' do
-      let(:response_status) { 404 }
       let(:response) { Faraday::Response.new({:status=>response_status, :body => '{}'}) }
+      context "when status code is 404" do
+        let(:response_status) { 404 }
 
-      include_examples 'should log with failure and raise exception'
-
-      [404,422].each do |status|
-        context "when status code is #{status}" do
-          let(:response_status) { status }
-
-          include_examples 'should log with failure and raise exception'
-
-          it 'should raise ArgumentError' do
-            expect { subject.receive('q', 11) }.to raise_exception(Dynamiq::Client::ObjectDoesNotExistError)
-          end
+        it 'should raise ObjectDoesNotExistError' do
+          expect { subject.receive('q', 11) }.to raise_exception(Dynamiq::Client::ObjectDoesNotExistError)
         end
       end
-    end
 
-    context 'when an exception is raised in get' do
-      before(:each) { conn.stub(:get).and_raise }
-
-      include_examples 'should log with failure and raise exception'
+      context "when status code is 422" do
+        let(:response_status) { 422 }
+        
+        it 'should raise ArgumentError' do
+          expect { subject.receive('q', 11) }.to raise_exception(ArgumentError)
+        end
+      end
     end
   end
 
   context '#queue_details' do
+    let (:response) {Faraday::Response.new({:status=>200, :body => '{"option":"100"}'})}
     before (:each) do
       conn.stub(:get).and_return(response)
     end
 
     it 'should GET queue details' do
       conn.should_receive(:get).with("queues/q")
-      expect(subject.queue_details('q')).to eq({})
+      expect(subject.queue_details('q')).to eq({"option"=>"100"})
     end
 
-    it 'should return nil for non 200s' do
-      r = Faraday::Response.new({:status=>400, :body => '{}'})
-      conn.stub(:get).and_return(r)
-
-      expect(subject.queue_details('q')).to eq(nil)
+    context "when the queue does not exist" do
+      let (:response) {Faraday::Response.new({:status=>404, :body => ''})}
+      it "raises an ObjectDoesNotExistError" do
+        expect{subject.queue_details('q')}.to raise_exception(Dynamiq::Client::ObjectDoesNotExistError)
+      end
     end
 
-    it 'should log warning for 404s' do
-      r = Faraday::Response.new({:status=>404, :body => '{}'})
-      conn.stub(:get).and_return(r)
-      ::Dynamiq.logger.should_receive(:warn)
-      subject.queue_details('q')
-    end
-
-    it 'should log with failure' do
-      conn.stub(:get).and_raise
-      ::Dynamiq.logger.should_receive(:error)
-      subject.queue_details('q')
+    context "when we receive a non 200" do
+      let (:response) {Faraday::Response.new({:status=>500, :body => '{"option":"100"}'})}
+      it "raises a ConnectionError" do
+        expect{subject.queue_details('q')}.to raise_exception(Dynamiq::Client::ConnectionError)
+      end
     end
   end
 
   context '#known_queues' do
-    let (:response) {Faraday::Response.new({:status=>200, :body => '[]'})}
+    let (:response) {Faraday::Response.new({:status=>200, :body => '{"queues": ["q1","q2"]}'})}
     before (:each) do
       conn.stub(:get).and_return(response)
     end
 
     it 'should GET the known list of queues' do
       conn.should_receive(:get).with("queues")
-      expect(subject.known_queues).to eq([])
+      expect(subject.known_queues).to eq(["q1","q2"])
     end
 
-    it 'should return an empty array for non 200s' do
+    it 'should raise an exception if we dont get a 200' do
       r = Faraday::Response.new({:status=>404, :body => '{}'})
       conn.stub(:get).and_return(r)
 
-      expect(subject.known_queues).to eq([])
-    end
-
-    it 'should log with failure' do
-      conn.stub(:get).and_raise
-      ::Dynamiq.logger.should_receive(:error)
-      subject.known_queues
+      expect{subject.known_queues}.to raise_exception(Dynamiq::Client::ConnectionError) 
     end
   end
 

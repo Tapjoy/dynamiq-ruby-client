@@ -7,12 +7,13 @@ module Dynamiq
     DEFAULT_RETRY_COUNT = 2
     API_VERSION = 'v1'
 
-    class ConnectionError < Faraday::Error::ConnectionFailed; end
-    class TimeoutError < Faraday::Error::TimeoutError; end
-    class MessageDeliveryError < RuntimeError; end
-    class MessageAcknowledgementError < RuntimeError; end
-    class ObjectDoesNotExistError < RuntimeError; end
-    class ObjectAlreadyExistsError < RuntimeError; end
+    class DynamiqError < RuntimeError; end
+    class ConnectionError < DynamiqError; end
+    class TimeoutError < DynamiqError; end
+    class MessageDeliveryError < DynamiqError; end
+    class MessageAcknowledgementError < DynamiqError; end
+    class ObjectDoesNotExistError < DynamiqError; end
+    class ObjectAlreadyExistsError < DynamiqError; end
 
     attr_reader :connection_timeout, :retry_count
 
@@ -33,9 +34,9 @@ module Dynamiq
     # true
     #
     def create_topic(topic, opts={})
-      resp = retry_unless([201,422]) { handle_errors { connection.put("topics/#{topic}") } }
-      raise ObjectDoesNotExistError, JSON.parse(resp.body)["error"] if resp.status == 422
-      raise ConnectionError, "Failed to create topic. status: #{resp.status} response: #{resp.body}" unless resp.status_code == 201
+      resp = retry_unless([201,422]) { connection.put("topics/#{topic}") }
+      raise ObjectAlreadyExistsError, JSON.parse(resp.body)["error"] if resp.status == 422
+      raise ConnectionError, "Failed to create topic. status: #{resp.status} response: #{resp.body}" unless resp.status == 201
       # No meaningful data in response
       true
     end
@@ -50,9 +51,9 @@ module Dynamiq
     # true
     #
     def create_queue(queue, opts={})
-      resp = retry_unless([201,422]) { handle_errors { connection.put("queues/#{queue}") } }
-      raise ObjectDoesNotExistError, JSON.parse(resp.body)["error"] if resp.status == 422
-      raise ConnectionError, "Failed to create queue. status: #{resp.status} response: #{resp.body}" unless resp.status_code == 201
+      resp = retry_unless([201,422]) { connection.put("queues/#{queue}") } 
+      raise ObjectAlreadyExistsError, JSON.parse(resp.body)["error"] if resp.status == 422
+      raise ConnectionError, "Failed to create queue. status: #{resp.status} response: #{resp.body}" unless resp.status == 201
       # No meaningful data in response
       true
     end
@@ -66,31 +67,10 @@ module Dynamiq
     # true
     #
     def delete_topic(topic)
-      begin
-        handle_errors { connection.delete("topics/#{topic}") }
-        true
-      rescue => e
-        ::Dynamiq.logger.error "an error occured when deleting a topic - #{e.inspect}: #{e.message}"
-        false
-      end
-    end
-
-    # Delete a Dynamiq queue, if it exists on the server
-    # @param queue [String] name of the queue
-    # @example
-    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
-    #   @rqs.delete_queue('my_queue')
-    # => 
-    # true
-    #
-    def delete_queue(queue)
-      begin
-        handle_errors { connection.delete("queues/#{queue}") }
-        true
-      rescue => e
-        ::Dynamiq.logger.error "an error occured when deleting a queue - #{e.inspect}: #{e.message}"
-        false
-      end
+      resp = retry_unless([200,404]) { connection.delete("topics/#{topic}") }
+      raise ObjectDoesNotExistError, JSON.parse(resp.body) if resp.status == 404
+      raise ConnectionError, "Failed to create queue. status: #{resp.status} response: #{resp.body}" unless resp.status == 200
+      true
     end
 
     # Subscribe a queue to a topic
@@ -103,9 +83,9 @@ module Dynamiq
     # List of subscribed queues
     #
     def subscribe_queue(topic, queue)
-      resp = retry_unless([200,422]) { handle_errors { connection.put("topics/#{topic}/queues/#{queue}") } }
+      resp = retry_unless([200,422]) { connection.put("topics/#{topic}/queues/#{queue}") } 
       raise ObjectDoesNotExistError, JSON.parse(resp.body)["error"] if resp.status == 422
-      raise ConnectionError, "Failed to subscribe queue to topic. status: #{resp.status} response: #{resp.body}" unless resp.status_code == 200
+      raise ConnectionError, "Failed to subscribe queue to topic. status: #{resp.status} response: #{resp.body}" unless resp.status == 200
       JSON.parse(resp.body)["Queues"]
     end
 
@@ -122,12 +102,10 @@ module Dynamiq
     #
     def configure_queue(queue, opts={})
       resp = retry_unless(200) do
-        handle_errors do
-          connection.patch do |req|
-            req.url "queues/#{queue}"
-            req.headers["Content-Type"] = "application/json"
-            req.body = JSON.dump(opts)
-          end
+        connection.patch do |req|
+          req.url "queues/#{queue}"
+          req.headers["Content-Type"] = "application/json"
+          req.body = JSON.dump(opts)
         end
       end
       raise ConnectionError, "Failed to configure queue. status: #{resp.status} response: #{resp.body}" unless resp.status == 200
@@ -145,7 +123,7 @@ module Dynamiq
     # true
     #
     def publish(topic, data)
-      resp = retry_unless(200) { handle_errors { connection.put("topics/#{topic}/message", data) } }
+      resp = retry_unless(200) { connection.put("topics/#{topic}/message", data) } 
       raise MessageDeliveryError, "status: #{resp.status} response: #{resp.body}" unless resp.status == 200
       JSON.parse(resp.body)
     end
@@ -160,7 +138,7 @@ module Dynamiq
     # true
     #
     def enqueue(queue, data)
-      resp = retry_unless(200) { handle_errors { connection.put("queues/#{queue}/message", data) } }
+      resp = retry_unless(200) { connection.put("queues/#{queue}/message", data) } 
       raise MessageDeliveryError, "status: #{resp.status} response: #{resp.body}" unless resp.status == 200
       resp.body 
     end
@@ -175,7 +153,7 @@ module Dynamiq
     # true
     #
     def acknowledge(queue, message_id)
-      resp = retry_unless(200) { handle_errors { connection.delete("queues/#{queue}/message/#{message_id}") } }
+      resp = retry_unless(200) { connection.delete("queues/#{queue}/message/#{message_id}") } 
       raise MessageAcknowledgementError, "status: #{resp.status} response: #{resp.body}" unless resp.status == 200
       # There is no valuable information in the request body
       true
@@ -191,7 +169,7 @@ module Dynamiq
     # {...message data}
     #
     def receive(queue, batch_size=10)
-      resp = retry_unless([200,404,422]) { handle_errors { connection.get("queues/#{queue}/messages/#{batch_size}") } }
+      resp = retry_unless([200,404,422]) { connection.get("queues/#{queue}/messages/#{batch_size}") } 
       raise ArgumentError, "status: #{resp.status} response: #{resp.body}" if resp.status == 422
       raise ObjectDoesNotExistError, "status: #{resp.status} response: #{resp.body}" if resp.status == 404
       raise StandardError, "status: #{resp.status} response: #{resp.body}" unless resp.status == 200
@@ -207,8 +185,9 @@ module Dynamiq
     # {...queue details}
     #
     def queue_details(queue)
-      resp = retry_unless([200,404]) { handle_errors { connection.get("queues/#{queue}") } }
+      resp = retry_unless([200,404]) { connection.get("queues/#{queue}") } 
       raise ObjectDoesNotExistError, "status: #{resp.status} response: #{resp.body}" if resp.status == 404
+      raise ConnectionError, "Failed to get queue details. status: #{resp.status} response: #{resp.body}" unless resp.status == 200
       JSON.parse(resp.body)
     end
 
@@ -220,7 +199,7 @@ module Dynamiq
     # [...queues]
     #
     def known_queues
-      resp = retry_unless(200) { handle_errors { connection.get("queues") } }
+      resp = retry_unless(200) { connection.get("queues") } 
       raise ConnectionError, "Failed to list known queues. status: #{resp.status} response: #{resp.body}" unless resp.status == 200
       JSON.parse(resp.body)["queues"]
     end
@@ -233,7 +212,7 @@ module Dynamiq
     # [...topics]
     #
     def known_topics
-      resp = retry_unless(200) { handle_errors { connection.get("topics") } }
+      resp = retry_unless(200) { connection.get("topics") } 
       raise ConnectionError, "Failed to list known topics. status: #{resp.status} response: #{resp.body}" unless resp.status == 200
       JSON.parse(resp.body)["topics"]
     end
@@ -247,19 +226,11 @@ module Dynamiq
       end
     end
 
-    def handle_errors
-      yield
-    rescue Faraday::Error::ConnectionFailed => e
-      raise ConnectionError, e
-    rescue Faraday::Error::TimeoutError => e
-      raise TimeoutError, e
-    end
-
     def retry_unless(status_code)
       # Don't modify a value the user passes in
       codes = status_code
       # If it was only a single code passed in, make it an array
-      codes = [codes] unless codes.class == Array
+      codes = [codes] unless codes.is_a?(Array)
 
       retries_left = self.retry_count
       result = yield
@@ -270,6 +241,10 @@ module Dynamiq
         result = yield
       end
       return result
+      rescue Faraday::Error::ConnectionFailed => e
+        raise ConnectionError, e
+      rescue Faraday::Error::TimeoutError => e
+        raise TimeoutError, e
     end
   end
 end

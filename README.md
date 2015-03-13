@@ -6,7 +6,7 @@ DynamiqClient provides a Ruby interface for the Dynamiq RESTful API
 
 Add this line to your application's Gemfile:
 
-    gem 'dynamiq_client'
+    gem 'dynamiq-ruby-client'
 
 And then execute:
 

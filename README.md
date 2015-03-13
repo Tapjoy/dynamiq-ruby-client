@@ -14,7 +14,7 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install dynamiq_client
+    $ gem install dynamiq-ruby-client
 
 ## Usage
 

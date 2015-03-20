@@ -3,7 +3,8 @@ require 'json'
 
 module Dynamiq
   class Client
-    DEFAULT_CONNECTION_TIMEOUT = 2
+    # 100ms connection timeout
+    DEFAULT_CONNECTION_TIMEOUT = 0.1
     DEFAULT_RETRY_COUNT = 2
     API_VERSION = 'v1'
 
@@ -220,7 +221,9 @@ module Dynamiq
     def connection
       @connection ||= Faraday.new(:url=>"#{@url}:#{@port}") do |c|
         c.options.timeout = self.connection_timeout
-        c.request :retry, :max => 3
+        # There is a bug somewhere that causes Faraday Retry Middleware to retry 2 * max+1
+        # 0 will result in 2 calls (original + 1 retry), which is closer to what we intend
+        c.request :retry, :max => 0
         c.adapter Faraday.default_adapter
         c.path_prefix = API_VERSION
       end

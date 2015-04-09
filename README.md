@@ -56,11 +56,11 @@ Configure the queue
 
 ```ruby
 dynamiq.configure_queue('my_queue', {
-  :visibility_timeout=>2,
+  :visibility_timeout=>5,
   :compressed_messages=>false,
   :min_partiitions=>1,
   :max_partitions=>10,
-  :max_partition_age=>423000
+  :max_partition_age=>432000
 })
 ```
 
@@ -96,7 +96,13 @@ This will return an array of messages, like so
 [{"body":"{'k':'v'}","id":"7096414283680965447"},{"body":"{'k2':'v2'}","id":"7447159266230116988"}]
 ```
 
+Note that the batch size is a suggested max return value, and is not a gaurantee that you'll get your batch size fulfilled. 
+
+You will never receive more than the batch size.
+
 Acknolwedge / Delete a Dynamiq message
+
+Once you have a message from #receive, you can take the "id" from the message, and use it in a call to #acknowledge to successfully delete the message from Dynamiq
 
 ```ruby
 dynamiq.acknowledge('my_queue', '7447159266230116988')

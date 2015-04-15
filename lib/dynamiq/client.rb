@@ -160,6 +160,22 @@ module Dynamiq
       true
     end
 
+    # Ack multiple Dynamiq messages
+    # @param queue [String] name of the queue
+    # @param message_id [String] id of the message
+    # @example
+    #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
+    #   @rqs.acknowledge('my_queue', 'a3df32')
+    # => 
+    # true
+    #
+    def acknowledge_many(queue, message_ids)
+      resp = retry_unless(200) { connection.delete("queues/#{queue}/messages/#{message_ids.join(',')}") } 
+      raise MessageAcknowledgementError, "status: #{resp.status} response: #{resp.body}" unless resp.status == 200
+      # There is no valuable information in the request body
+      JSON.parse(resp.body)
+    end
+
     # Receive a batch of Dynamiq messages
     # @param queue [String] name of the queue
     # @param batch_size [Integer] the size of the batch

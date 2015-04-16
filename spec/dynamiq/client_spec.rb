@@ -266,6 +266,17 @@ describe Dynamiq::Client do
     end
   end
 
+  context "#acknowledge_many" do
+    before(:each) do
+      conn.stub(:delete).and_return(response)
+    end
+
+    it "should DELETE messages from queue" do
+      conn.should_receive(:delete).with("queues/q/message/id1,id2,id3")
+      subject.acknowledge_many('q', ['id1','id2','id3'])
+    end
+  end
+
   context '#receive' do
     before (:each) do
       conn.stub(:get).and_return(response)

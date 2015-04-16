@@ -162,12 +162,12 @@ module Dynamiq
 
     # Ack multiple Dynamiq messages
     # @param queue [String] name of the queue
-    # @param message_id [String] id of the message
+    # @param message_ids [Array] ids of the messages
     # @example
     #   @rqs = Dynamiq::Client.new('http://example.io', '9999')
-    #   @rqs.acknowledge('my_queue', 'a3df32')
+    #   @rqs.acknowledge_many('my_queue', ['a3df32','zz43545fd','hd65343'])
     # => 
-    # true
+    # {"deleted":3}
     #
     def acknowledge_many(queue, message_ids)
       resp = retry_unless(200) { connection.delete("queues/#{queue}/messages/#{message_ids.join(',')}") } 

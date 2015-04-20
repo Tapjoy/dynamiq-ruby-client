@@ -272,7 +272,7 @@ describe Dynamiq::Client do
     end
 
     it "should DELETE messages from queue" do
-      conn.should_receive(:delete).with("queues/q/message/id1,id2,id3")
+      conn.should_receive(:delete).with("queues/q/messages/id1,id2,id3")
       subject.acknowledge_many('q', ['id1','id2','id3'])
     end
   end

@@ -16,13 +16,15 @@ module Dynamiq
     class ObjectDoesNotExistError < DynamiqError; end
     class ObjectAlreadyExistsError < DynamiqError; end
 
-    attr_reader :connection_timeout, :retry_count
+    attr_reader :connection_timeout, :retry_count, :persistent_connection
 
     def initialize(url, port, opts={})
       @url = url
       @port = port
       @connection_timeout = opts[:connection_timeout] || DEFAULT_CONNECTION_TIMEOUT
       @retry_count = opts[:retry_count] || DEFAULT_RETRY_COUNT
+      # Can't use the || idiom if the value is false
+      @persistent_connection = opts.fetch(:persistent_connection, true)
     end
 
     # Create a Dynamiq topic, if it does not already exist on the server
@@ -240,7 +242,11 @@ module Dynamiq
         # There is a bug somewhere that causes Faraday Retry Middleware to retry 2 * max+1
         # 0 will result in 2 calls (original + 1 retry), which is closer to what we intend
         c.request :retry, :max => 0
-        c.adapter Faraday.default_adapter
+        if persistent_connection
+          c.adapter :net_http_persistent
+        else
+          c.adapter Faraday.default_adapter
+        end
         c.path_prefix = API_VERSION
       end
     end
